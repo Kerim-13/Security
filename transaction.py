@@ -6,8 +6,6 @@ import json
 import time
 import requests
 
-config = ""
-
 def get_jwt_token(payload_hash):
     jwt_file = {
         "tha":payload_hash,
@@ -26,11 +24,11 @@ def get_md5_hash(data):
 
     return md5.hexdigest()
 
-def send_transaction(source, target, amount=2):
+def send_transaction(source, target, amount, config):
 
     if amount < config["tx_lower_limit"] or amount > config["tx_upper_limit"]:
         print("amount exceeds transaction limit.")
-    return -1
+        return -1
 
     payload_json = {
         "source":source,
@@ -51,13 +49,14 @@ def send_transaction(source, target, amount=2):
 
     response = requests.post(
         "https://gradecoin.xyz/transaction", headers=headers, json=payload_json)
+    print(response.text)
     
-    return response
+    return 0
 
 def get_transaction():
     response = requests.get("https://gradecoin.xyz/transaction")
-    
-    return response
+    print_transactions(response.json())
+    return 0
 
 def print_transactions(response_json):
     for transaction in response_json:
@@ -74,16 +73,11 @@ def main():
     fingerprint = data["fingerprint"]
     config = requests.get("https://gradecoin.xyz/config").json()
     
-    response = get_transaction()
-    print_transactions(response.json())
-
-    """
-    temp_target = "f44f83688b33213c639bc16f9c167543568d4173d5f4fc7eb1256f6c7bb23b26"
+    get_transaction()
+    
+    temp_target = "4319647f2ad81e83bf602692b32a082a6120c070b6fd4a1dbc589f16d37cbe1d"
     source = fingerprint
-
-    response = send_transaction(source, temp_target, 2)
-    print(response.text)
-    """
-
+    send_transaction(source, temp_target, 1, config)
+    
 if __name__ == "__main__":
     main()
