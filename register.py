@@ -10,10 +10,6 @@ import base64
 import os
 import requests
 
-student_id = "e237534"
-one_time_password = """1FPpJzJEY5gPFURoWmkfqqMKUNpdSyFO"""
-
-
 class AESCipher():
     def __init__(self, key, IV, mode=AES.MODE_CBC):
         self.encryptor = AES.new(key, mode, IV=IV)
@@ -45,14 +41,14 @@ class OAEP():
         return cipher
 
 
-def main():
+def register_student(student_id, one_time_password):
 
     if not os.path.isfile("private_key.pem") and not os.path.isfile("public_key.pem"):
         print("Files don't exist.")
 
         new_key = RSA.generate(2048)
 
-        own_private_key = new_key.exportKey("PEM")
+        own_private_key = new_key.exportKey("PEM", pcks=8)
         own_public_key = new_key.publickey().exportKey("PEM")
         gradecoin_public_key = RSA.import_key(open('gradecoin.pub').read())
         own_public_key_str = open('public_key.pem', "r").read()
@@ -122,11 +118,18 @@ def main():
     print(response.text)
     print(response.headers)
 
-    with open("response.json", "w") as write:
-        json.dump(response.json(), write)
+    if not os.path.isfile("response.json"):
+        with open("response.json", "w") as write:
+            json.dump(response.json(), write)
 
     print(response.json())
 
+def main():
+    f = open("student_data.json")
+    data = json.load(f)
+    student_id = data["student_id"]
+    one_time_password = data["one_time_password"]
+    register_student(student_id, one_time_password)
 
 if __name__ == "__main__":
     main()
