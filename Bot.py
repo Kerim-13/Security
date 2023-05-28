@@ -7,7 +7,7 @@ import argparse
 import json
 import requests
 
-def transaction_source_target_exists(source, target):
+def transaction_pair_exists(source, target):
     transactions = requests.get("https://gradecoin.xyz/transaction").json()
 
     for transaction in transactions:
@@ -15,6 +15,15 @@ def transaction_source_target_exists(source, target):
             return True
 
     return False
+
+def find_transaction_pair(source, target):
+    transactions = requests.get("https://gradecoin.xyz/transaction").json()
+
+    for transaction in transactions:
+        if transactions[transaction]["source"] == source and transactions[transaction]["target"] == target:
+            return transaction
+
+    return -1
 
 def get_users():
     f = open("users.json")
@@ -28,7 +37,7 @@ def get_other_transactions(fingerprint):
     
     for transaction in transactions:
         if transactions[transaction]["source"] != fingerprint:
-            my_transactions.append(transaction)
+            other_transactions.append(transaction)
 
     return other_transactions
 
@@ -55,18 +64,56 @@ def main():
     other_transactions = get_other_transactions(fingerprint)
     users, bots = get_users()
     
-    transaction_sum = len(my_transactions) + len(other_transactions)
+    while True:
+        if len(my_transactions) == 0:
+            target = bots[0]
+            amount = config["tx_lower_limit"]
+            Transaction.send_transaction(fingerprint, target, amount, config)
+            transaction = find_transaction_pair(fingerprint, target)
 
-    if len(my_transactions) == 0:
-        config = requests.get("https://gradecoin.xyz/config").json()
-        target = bots[0]
-        amount = config["tx_lower_limit"]
-        Transaction.send_transaction(fingerprint, target, amount, config)
-        
+            if(transaction != -1):
+                my_transactions.append(transaction)
+            else:
+                print("Couldn't find such a pair.")
+                return -1
 
-    #while transaction_sum < min_block_size:
-    for target in bots:
-        print(transaction_source_target_exists(fingerprint, target))
+        transaction_sum = len(my_transactions) + len(other_transactions)
+
+        for target in bots:
+            if transaction_sum >= min_block_size:
+                break
+
+            if not transaction_pair_exists(fingerprint, target):
+                amount = config["tx_lower_limit"]
+                Transaction.send_transaction(fingerprint, target, amount, config)
+                transaction = find_transaction_pair(fingerprint, target)
+
+                if(transaction != -1):
+                    my_transactions.append(transaction)
+                    transaction_sum += 1
+                else:
+                    print("Couldn't find such a pair.")
+                    return -1
+
+        for target in users:
+            if transaction_sum >= min_block_size:
+                break
+
+            if not transaction_pair_exists(fingerprint, target):
+                amount = config["tx_lower_limit"]
+                Transaction.send_transaction(fingerprint, target, amount, config)
+                transaction = find_transaction_pair(fingerprint, target)
+
+                if(transaction != -1):
+                    my_transactions.append(transaction)
+                    transaction_sum += 1
+                else:
+                    print("Couldn't find such a pair.")
+                    return -1
+
+        ret = Block.send_block(fingerprint)
+
+    return 0
 
 if __name__ == "__main__":
     main()
