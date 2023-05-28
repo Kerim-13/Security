@@ -60,11 +60,18 @@ def main():
     min_block_size = config["block_transaction_count"]
 
     fingerprint = args.fingerprint
-    my_transactions = get_my_transactions(fingerprint)
-    other_transactions = get_other_transactions(fingerprint)
     users, bots = get_users()
     
+    blocks_mined = 0
+
     while True:
+        print("Blocks mined:", blocks_mined)
+
+        my_transactions = get_my_transactions(fingerprint)
+        other_transactions = get_other_transactions(fingerprint)
+
+        print("Checking transacitons.")
+
         if len(my_transactions) == 0:
             target = bots[0]
             amount = config["tx_lower_limit"]
@@ -110,8 +117,14 @@ def main():
                 else:
                     print("Couldn't find such a pair.")
                     return -1
-
+        
+        print("Transactions done.")
+        
+        print("Mining block.")
         ret = Block.send_block(fingerprint)
+        print("Mining done.")
+
+        blocks_mined += 1
 
     return 0
 
