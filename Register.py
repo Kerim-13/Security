@@ -3,6 +3,8 @@ from Crypto.Cipher import AES
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA256
 from hashlib import sha256
+import argparse
+import sys
 import jwt
 import binascii
 import json
@@ -125,10 +127,21 @@ def register_student(student_id, one_time_password):
     print(response.json())
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--number")
+    parser.add_argument("-p", "--password")
+    args = parser.parse_args()
+    """
     f = open("student_data.json")
     data = json.load(f)
-    student_id = data["student_id"]
-    one_time_password = data["one_time_password"]
+    """
+
+    student_id = args.number
+    one_time_password = args.password
+
+    print(student_id, type(student_id))
+    print(one_time_password, type(one_time_password))
+    
     register_student(student_id, one_time_password)
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
 from Crypto.PublicKey import RSA
 from Crypto.Hash import MD5
 from datetime import datetime
+import argparse
+import sys
 import jwt
 import json
 import time
@@ -68,16 +70,34 @@ def print_transactions(response_json):
         print()
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--method")
+    parser.add_argument("-s", "--source")
+    parser.add_argument("-t", "--target")
+    parser.add_argument("-a", "--amount")
+    args = parser.parse_args()
+    
+    """
     f = open("student_data.json")
     data = json.load(f)
     fingerprint = data["fingerprint"]
+    """
     config = requests.get("https://gradecoin.xyz/config").json()
     
-    get_transaction()
+    method = args.method
     
-    temp_target = "4319647f2ad81e83bf602692b32a082a6120c070b6fd4a1dbc589f16d37cbe1d"
-    source = fingerprint
-    send_transaction(source, temp_target, 1, config)
+
+    if method == "post":
+        source = args.source
+        target = args.target
+        amount = int(args.amount)
+        send_transaction(source, target, amount, config)
     
+    elif method == "get":
+        get_transaction()
+    
+    else:
+        print("Unknown work.")
+
 if __name__ == "__main__":
     main()
