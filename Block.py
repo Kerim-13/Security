@@ -62,9 +62,7 @@ def send_block_request(json_payload):
     response = requests.post(
         "https://gradecoin.xyz/block", headers=headers, json=json_payload)
     
-    print(response.text)
-
-    return 0
+    return response
 
 def send_block(fingerprint):
 

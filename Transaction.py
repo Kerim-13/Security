@@ -51,9 +51,9 @@ def send_transaction(source, target, amount, config):
 
     response = requests.post(
         "https://gradecoin.xyz/transaction", headers=headers, json=payload_json)
-    print(response.text)
+    #print(response.text)
     
-    return 0
+    return response
 
 def get_transaction():
     response = requests.get("https://gradecoin.xyz/transaction")
