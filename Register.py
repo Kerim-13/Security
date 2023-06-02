@@ -50,7 +50,7 @@ def register_student(student_id, one_time_password):
 
         new_key = RSA.generate(2048)
 
-        own_private_key = new_key.exportKey("PEM", pcks=8)
+        own_private_key = new_key.exportKey("PEM")
         own_public_key = new_key.publickey().exportKey("PEM")
         gradecoin_public_key = RSA.import_key(open('gradecoin.pub').read())
         own_public_key_str = open('public_key.pem', "r").read()

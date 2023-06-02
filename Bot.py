@@ -21,7 +21,7 @@ globalFingerpint = "1c6f23a225f97b9d72ba4f3d9b4da30e2e8a4ec0a223be7386944c419bf2
 bots = ["f44f83688b33213c639bc16f9c167543568d4173d5f4fc7eb1256f6c7bb23b26", "5dcdedc9a04ea6950153c9279d0f8c1ac9528ee8cdf5cd912bebcf7764b3f9db", 
             "a4d9a38a04d0aa7de7c29fef061a1a539e6a192ef75ea9730aff49f9bb029f99", "4319647f2ad81e83bf602692b32a082a6120c070b6fd4a1dbc589f16d37cbe1d"]
 
-blockQueue = multiprocessing.Queue(maxsize=1)
+
 
 def findTransaction(source, target):
     transactions = requests.get("https://gradecoin.xyz/transaction").json()
@@ -32,14 +32,28 @@ def findTransaction(source, target):
 
     return TRANSACTION_NOT_EXISTS
 
-def mineBlock(idx, transaction_list, begin, end):
+def blockExists(transactionList):
+    txs = requests.get("https://gradecoin.xyz/transaction").json()
+    #print(txs)
+    allTransactions = []
 
-    config = requests.get("https://gradecoin.xyz/config").json()
+    for key in txs:
+        allTransactions.append(key)
+
+    for transaction in transactionList:
+        if transaction not in allTransactions:
+            return False
+
+    return True
+
+def mineBlock(idx, transaction_list, begin, end, blockQueue, config):
+
     hash_zeros = config["hash_zeros"]
 
     timestamp = datetime.now().isoformat()
+    counter = 0
     for i in range(begin, end+1):
-
+        counter += 1
         nonce = i
 
         blake2_json = {
@@ -51,6 +65,13 @@ def mineBlock(idx, transaction_list, begin, end):
         blake2_str = json.dumps(blake2_json).replace(" ", "")
         gfg = BLAKE2s.new(digest_bits=256)
         gfg.update(blake2_str.encode())
+        
+        if idx == 0 and counter == 1000:
+            counter = 0
+            if not blockExists(transaction_list):
+                print("Block already solved.")
+                blockQueue.put(-1)
+                return 0
 
         if gfg.hexdigest().startswith("0"*hash_zeros):
             blake2_json["hash"] = gfg.hexdigest()
@@ -59,12 +80,13 @@ def mineBlock(idx, transaction_list, begin, end):
     print("Solved Hash:", idx)
     blockQueue.put(blake2_json)
 
-def solveBlockMultiThread(transactionBlock):
+def solveBlockMultiThread(transactionBlock, config):
     processes = []
+    blockQueue = multiprocessing.Queue(maxsize=1)
     interval = (MAX_NONCE // NUM_THREADS) + 1
     print("Starting solvers.")
     for i in range(NUM_THREADS):
-        process = multiprocessing.Process(target=mineBlock, args=(i, copy.deepcopy(transactionBlock), i * interval, (i+1)*interval))
+        process = multiprocessing.Process(target=mineBlock, args=(i, copy.deepcopy(transactionBlock), i * interval, (i+1)*interval, blockQueue, config))
         processes.append(process)
         process.start()
 
@@ -74,6 +96,10 @@ def solveBlockMultiThread(transactionBlock):
     for i in range(NUM_THREADS):
         process = processes[i]
         process.terminate()
+
+
+    if blake2Json == -1:
+        return -1
 
     return blake2Json
 
@@ -114,9 +140,10 @@ def getSendingTransactions(source):
 def minerBot(fingerprint):
     
     cnt = 0
+    config = requests.get("https://gradecoin.xyz/config").json()
 
     while True:
-        config = requests.get("https://gradecoin.xyz/config").json()
+        
         
         otherTransactions = getOtherTransactions(fingerprint)
         sendingTransactions = getSendingTransactions(fingerprint)
@@ -145,7 +172,11 @@ def minerBot(fingerprint):
             transactionBlock.append(allTransactions[i])
 
         print("Starting solution process.")
-        blake2Json = solveBlockMultiThread(transactionBlock)
+        blake2Json = solveBlockMultiThread(transactionBlock, config)
+
+        if blake2Json == -1:
+            continue
+
         print("Sending block requests.")
         response = Block.send_block_request(blake2Json)
 
